@@ -8,8 +8,6 @@ on:
       - 'Android/**'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - 'Android/**'
 
 jobs:
   build_apk:
