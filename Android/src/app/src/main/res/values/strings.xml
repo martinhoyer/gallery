@@ -27,6 +27,7 @@
   </plurals>
   <string name="model_list_recommended_models_title" translatable="false">Recommended models</string>
   <string name="model_list_imported_models_title" translatable="false">Imported models</string>
+  <string name="model_list_experimental_label" translatable="false">EXPERIMENTAL</string>
   <string name="model_manager" translatable="false">Model Manager</string>
   <string name="download" translatable="false">Download</string>
   <string name="downloaded_size" translatable="false">%1$s downloaded</string>
@@ -39,8 +40,11 @@
   <string name="checking_access" translatable="false">Checking access...</string>
   <string name="ok" translatable="false">OK</string>
   <string name="close" translatable="false">Close</string>
+  <string name="error" translatable="false">Error</string>
   <string name="confirm_delete_model_dialog_title" translatable="false">Delete download</string>
   <string name="confirm_delete_model_dialog_content" translatable="false">Are you sure you want to delete the downloaded model \"%s\"?</string>
+  <string name="conversation_reset_message" translatable="false">Conversation was reset</string>
+  <string name="engin_reset_message" translatable="false">Engine was reset</string>
   <string name="notification_title_success" translatable="false">Model download succeeded</string>
   <string name="notification_content_success" translatable="false">Model \"%s\" has been downloaded</string>
   <string name="notification_title_fail" translatable="false">Model download failed</string>
@@ -60,14 +64,15 @@
   <string name="model_not_downloaded_msg" translatable="false">Model not downloaded yet</string>
   <string name="model_is_initializing_msg" translatable="false">Initializing model…</string>
   <string name="reset" translatable="false">Reset</string>
+  <string name="reset_note" translatable="false">Tapping \"Reset\" will reset LiteRT-LM engine only. The game progress won\'t be affected.</string>
+  <string name="resetting_engine" translatable="false">Resetting engine...</string>
+  <string name="reinitializing_description" translatable="false">The game progress won\'t be affected</string>
   <string name="settings_dialog_tos_title" translatable="false">Terms of services</string>
   <string name="text_input_placeholder_text_classification" translatable="false">Type movie review to classify…</string>
   <string name="text_image_generation_text_field_placeholder" translatable="false">Type prompt…</string>
   <string name="text_input_placeholder_llm_chat" translatable="false">Type prompt…</string>
-  <string name="tos_dialog_title_app_name" translatable="false">Google AI Edge Gallery App</string>
-  <string name="tos_dialog_title_tos" translatable="false">Terms of Service</string>
-  <string name="tos_dialog_view_full_tos" translatable="false">View this app\'s Terms of Service</string>
-  <string name="tos_dialog_view_accept_button_label" translatable="false">Accept and Continue</string>
+  <string name="tos_dialog_title" translatable="false">Welcome to Google AI Edge Gallery</string>
+  <string name="tos_dialog_view_accept_button_label" translatable="false">Accept &amp; Continue</string>
   <string name="try_it" translatable="false">Try it</string>
   <string name="run_again" translatable="false">Run again</string>
   <string name="benchmark" translatable="false">Run benchmark</string>
@@ -87,11 +92,14 @@
   <string name="set_timer_message" translatable="false">Setting the timer for %1$d seconds.</string>
   <string name="add_calendar_event_message" translatable="false">Adding \"Team meeting (10AM-11AM)\" to your calendar.</string>
   <string name="take_picture_message" translatable="false">Opening the camera app.</string>
-  <string name="voice_to_action_title" translatable="false">Voice to Action</string>
-  <string name="voice_to_action_description" translatable="false">Control your device with simple commands</string>
+  <string name="mobile_actions_title" translatable="false">Mobile Actions</string>
+  <string name="mobile_actions_description" translatable="false">Control your device with simple commands</string>
+  <string name="mobile_actions_supported_actions" translatable="false">Supported sample actions:</string>
+  <string name="mobile_actions_tab_model_response" translatable="false">Model response</string>
+  <string name="mobile_actions_tab_function_called" translatable="false">Function(s) called</string>
   <string name="conversation_history" translatable="false">Conversation History</string>
   <string name="warning_no_function_call" translatable="false">No function recognized</string>
-  <string name="snackbar_no_function_call" translatable="false">No function recognized. Check history for details.</string>
+  <string name="snackbar_no_function_call" translatable="false">No function recognized</string>
   <string name="unknown_error" translatable="false">Unknown error</string>
 
   <string name="function_name" translatable="false">Function name</string>
@@ -99,10 +107,12 @@
     <item quantity="one">Parameter</item>
     <item quantity="other">Parameters</item>
   </plurals>
+  <string name="prompt_template_label_flash_on_off" translatable="false">Turn flashlight on/off</string>
   <string name="prompt_template_label_flash_on" translatable="false">Flashlight on</string>
   <string name="prompt_template_label_flash_off" translatable="false">Flashlight off</string>
   <string name="prompt_template_label_create_contact" translatable="false">Create contact</string>
   <string name="prompt_template_label_send_email" translatable="false">Send email</string>
+  <string name="prompt_template_label_create_calendar_event" translatable="false">Create calendar event</string>
   <string name="prompt_template_label_show_location_on_map" translatable="false">Show location on map</string>
   <string name="prompt_template_label_open_wifi_settings" translatable="false">Open WIFI settings</string>
 

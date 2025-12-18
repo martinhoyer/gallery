@@ -35,10 +35,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.ai.edge.gallery.R
@@ -82,6 +85,7 @@ fun ModelList(
   task: Task,
   modelManagerViewModel: ModelManagerViewModel,
   contentPadding: PaddingValues,
+  enableAnimation: Boolean,
   onModelClicked: (Model) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -113,32 +117,40 @@ fun ModelList(
   val listState = rememberLazyListState()
 
   val taskIconProgress =
-    rememberDelayedAnimationProgress(
-      initialDelay = ANIMATION_INIT_DELAY,
-      animationDurationMs = TASK_ICON_ANIMATION_DURATION,
-      animationLabel = "task icon",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = ANIMATION_INIT_DELAY,
+        animationDurationMs = TASK_ICON_ANIMATION_DURATION,
+        animationLabel = "task icon",
+      )
 
   val taskLabelProgress =
-    rememberDelayedAnimationProgress(
-      initialDelay = ANIMATION_INIT_DELAY + 300,
-      animationDurationMs = TASK_ICON_ANIMATION_DURATION,
-      animationLabel = "task label",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = ANIMATION_INIT_DELAY + 300,
+        animationDurationMs = TASK_ICON_ANIMATION_DURATION,
+        animationLabel = "task label",
+      )
 
   val descriptionProgress =
-    rememberDelayedAnimationProgress(
-      initialDelay = ANIMATION_INIT_DELAY + TASK_DESCRIPTION_SECTION_ANIMATION_START,
-      animationDurationMs = DEFAULT_ANIMATION_DURATION,
-      animationLabel = "description",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = ANIMATION_INIT_DELAY + TASK_DESCRIPTION_SECTION_ANIMATION_START,
+        animationDurationMs = DEFAULT_ANIMATION_DURATION,
+        animationLabel = "description",
+      )
 
   val modelListProgress =
-    rememberDelayedAnimationProgress(
-      initialDelay = ANIMATION_INIT_DELAY + MODEL_LIST_ANIMATION_START,
-      animationDurationMs = DEFAULT_ANIMATION_DURATION,
-      animationLabel = "model_list",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = ANIMATION_INIT_DELAY + MODEL_LIST_ANIMATION_START,
+        animationDurationMs = DEFAULT_ANIMATION_DURATION,
+        animationLabel = "model_list",
+      )
 
   Box(
     contentAlignment = Alignment.BottomEnd,
@@ -182,6 +194,27 @@ fun ModelList(
               textAlign = TextAlign.Center,
               animationProgress = taskLabelProgress,
             )
+          }
+
+          // Experimental pill
+          if (task.experimental) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+              Surface(
+                shape = CircleShape, // This creates the "pill" effect
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier =
+                  Modifier.align(Alignment.Center).graphicsLayer {
+                    alpha = descriptionProgress
+                    translationY = (CONTENT_ANIMATION_OFFSET * (1 - descriptionProgress)).toPx()
+                  },
+              ) {
+                Text(
+                  text = stringResource(R.string.model_list_experimental_label),
+                  style = bodyLargeNarrow.copy(fontWeight = FontWeight.Bold),
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+              }
+            }
           }
 
           // Description.

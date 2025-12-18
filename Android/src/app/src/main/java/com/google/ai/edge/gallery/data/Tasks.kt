@@ -91,6 +91,15 @@ data class Task(
    */
   val modelNames: List<String> = listOf(),
 
+  /**
+   * Whether to handel model config changes in task's screen itself. The default behavior is to
+   * automatically re-initialize the model.
+   */
+  val handleModelConfigChangesInTask: Boolean = false,
+
+  /** Whether the task is experimental. */
+  val experimental: Boolean = false,
+
   // The following fields are only used for built-in tasks. Can ignore if you are creating your own
   // custom tasks.
   //
@@ -113,7 +122,7 @@ object BuiltInTaskId {
   const val LLM_PROMPT_LAB = "llm_prompt_lab"
   const val LLM_ASK_IMAGE = "llm_ask_image"
   const val LLM_ASK_AUDIO = "llm_ask_audio"
-  const val LLM_VOICE_TO_ACTION = "llm_voice_to_action"
+  const val LLM_MOBILE_ACTIONS = "llm_mobile_actions"
   const val LLM_TINY_GARDEN = "llm_tiny_garden"
 }
 

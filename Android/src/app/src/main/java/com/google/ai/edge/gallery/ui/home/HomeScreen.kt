@@ -93,6 +93,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -106,6 +107,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import com.google.ai.edge.gallery.GalleryTopAppBar
 import com.google.ai.edge.gallery.R
@@ -114,6 +116,8 @@ import com.google.ai.edge.gallery.data.AppBarActionType
 import com.google.ai.edge.gallery.data.BuiltInTaskId
 import com.google.ai.edge.gallery.data.Category
 import com.google.ai.edge.gallery.data.CategoryInfo
+import com.google.ai.edge.gallery.data.ConfigKeys
+import com.google.ai.edge.gallery.data.DEFAULT_TEMPERATURE
 import com.google.ai.edge.gallery.data.Task
 import com.google.ai.edge.gallery.firebaseAnalytics
 import com.google.ai.edge.gallery.proto.ImportedModel
@@ -149,19 +153,17 @@ object HomeScreenDestination {
   @StringRes val titleRes = R.string.app_name
 }
 
-private val PREDEFINED_CATEGORY_ORDER =
-  listOf(Category.LLM.id, Category.AGENTS.id, Category.EXPERIMENTAL.id)
+private val PREDEFINED_CATEGORY_ORDER = listOf(Category.LLM.id, Category.EXPERIMENTAL.id)
 
 private val PREDEFINED_LLM_TASK_ORDER =
   listOf(
     BuiltInTaskId.LLM_ASK_IMAGE,
     BuiltInTaskId.LLM_ASK_AUDIO,
-    BuiltInTaskId.LLM_PROMPT_LAB,
     BuiltInTaskId.LLM_CHAT,
+    BuiltInTaskId.LLM_PROMPT_LAB,
+    BuiltInTaskId.LLM_TINY_GARDEN,
+    BuiltInTaskId.LLM_MOBILE_ACTIONS,
   )
-
-private val PREDEFINED_AGENTS_TASK_ORDER =
-  listOf(BuiltInTaskId.LLM_TINY_GARDEN, BuiltInTaskId.LLM_VOICE_TO_ACTION)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,6 +171,7 @@ fun HomeScreen(
   modelManagerViewModel: ModelManagerViewModel,
   tosViewModel: TosViewModel,
   navigateToTaskScreen: (Task) -> Unit,
+  enableAnimation: Boolean,
   modifier: Modifier = Modifier,
 ) {
   val uiState by modelManagerViewModel.uiState.collectAsState()
@@ -180,6 +183,7 @@ fun HomeScreen(
   var showImportDialog by remember { mutableStateOf(false) }
   var showImportingDialog by remember { mutableStateOf(false) }
   var showTosDialog by remember { mutableStateOf(!tosViewModel.getIsTosAccepted()) }
+  var showMobileActionsChallengeDialog by remember { mutableStateOf(false) }
   val selectedLocalModelFileUri = remember { mutableStateOf<Uri?>(null) }
   val selectedImportedModelInfo = remember { mutableStateOf<ImportedModel?>(null) }
   val coroutineScope = rememberCoroutineScope()
@@ -198,11 +202,10 @@ fun HomeScreen(
       for (categoryId in groupedTasks.keys) {
         val sortedTasks =
           groupedTasks[categoryId]!!.sortedWith { a, b ->
-            if (categoryId == Category.LLM.id || categoryId == Category.AGENTS.id) {
+            if (categoryId == Category.LLM.id) {
               val order: List<String> =
                 when (categoryId) {
                   Category.LLM.id -> PREDEFINED_LLM_TASK_ORDER
-                  Category.AGENTS.id -> PREDEFINED_AGENTS_TASK_ORDER
                   else -> listOf()
                 }
               val indexA = order.indexOf(a.id)
@@ -339,11 +342,13 @@ fun HomeScreen(
           //
           // Fade in and move down at the same time.
           val progress =
-            rememberDelayedAnimationProgress(
-              initialDelay = ANIMATION_INIT_DELAY - 50,
-              animationDurationMs = TOP_APP_BAR_ANIMATION_DURATION,
-              animationLabel = "top bar",
-            )
+            if (!enableAnimation) 1f
+            else
+              rememberDelayedAnimationProgress(
+                initialDelay = ANIMATION_INIT_DELAY - 50,
+                animationDurationMs = TOP_APP_BAR_ANIMATION_DURATION,
+                animationLabel = "top bar",
+              )
           Box(
             modifier =
               Modifier.graphicsLayer {
@@ -395,8 +400,8 @@ fun HomeScreen(
                   ) {},
                 verticalArrangement = Arrangement.spacedBy(8.dp),
               ) {
-                AppTitle()
-                IntroText()
+                AppTitle(enableAnimation = enableAnimation)
+                IntroText(enableAnimation = enableAnimation)
               }
 
               // Tab header for categories.
@@ -411,6 +416,7 @@ fun HomeScreen(
                 CategoryTabHeader(
                   sortedCategories = sortedCategories,
                   selectedIndex = selectedCategoryIndex,
+                  enableAnimation = enableAnimation,
                   onCategorySelected = { index ->
                     selectedCategoryIndex = index
                     scope.launch { pagerState.animateScrollToPage(page = index) }
@@ -424,7 +430,14 @@ fun HomeScreen(
                 pagerState = pagerState,
                 sortedCategories = sortedCategories,
                 tasksByCategories = tasksByCategories,
-                navigateToTaskScreen = navigateToTaskScreen,
+                enableAnimation = enableAnimation,
+                navigateToTaskScreen = { task ->
+                  if (task.id == BuiltInTaskId.LLM_MOBILE_ACTIONS && task.models.isEmpty()) {
+                    showMobileActionsChallengeDialog = true
+                  } else {
+                    navigateToTaskScreen(task)
+                  }
+                },
               )
             }
 
@@ -505,6 +518,10 @@ fun HomeScreen(
   // Import dialog
   if (showImportDialog) {
     selectedLocalModelFileUri.value?.let { uri ->
+      // If it is from the Mobile Actions challenge flow.
+      val supportMobileActions = showMobileActionsChallengeDialog
+      showMobileActionsChallengeDialog = false
+
       ModelImportDialog(
         uri = uri,
         onDismiss = { showImportDialog = false },
@@ -513,6 +530,12 @@ fun HomeScreen(
           showImportDialog = false
           showImportingDialog = true
         },
+        defaultValues =
+          mapOf(
+            ConfigKeys.SUPPORT_MOBILE_ACTIONS to supportMobileActions,
+            ConfigKeys.DEFAULT_TEMPERATURE to
+              (if (supportMobileActions) 0.0f else DEFAULT_TEMPERATURE),
+          ),
       )
     }
   }
@@ -604,7 +627,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun AppTitle() {
+private fun AppTitle(enableAnimation: Boolean) {
   val firstLineText = stringResource(R.string.app_name_first_part)
   val secondLineText = stringResource(R.string.app_name_second_part)
   val titleColor = MaterialTheme.customColors.appTitleGradientColors[1]
@@ -622,20 +645,22 @@ private fun AppTitle() {
   // effect.
   Box(modifier = Modifier.clearAndSetSemantics {}) {
     var delay = ANIMATION_INIT_DELAY
-    SwipingText(
-      text = firstLineText,
-      style = titleStyle,
-      color = titleColor,
-      animationDelay = delay,
-      animationDurationMs = TITLE_FIRST_LINE_ANIMATION_DURATION,
-    )
-    delay += (TITLE_FIRST_LINE_ANIMATION_DURATION * 0.3).toLong()
+    if (enableAnimation) {
+      SwipingText(
+        text = firstLineText,
+        style = titleStyle,
+        color = titleColor,
+        animationDelay = delay,
+        animationDurationMs = TITLE_FIRST_LINE_ANIMATION_DURATION,
+      )
+      delay += (TITLE_FIRST_LINE_ANIMATION_DURATION * 0.3).toLong()
+    }
     SwipingText(
       text = firstLineText,
       style = titleStyle,
       color = MaterialTheme.colorScheme.onSurface,
-      animationDelay = delay,
-      animationDurationMs = TITLE_FIRST_LINE_ANIMATION_DURATION,
+      animationDelay = if (enableAnimation) delay else 0,
+      animationDurationMs = if (enableAnimation) TITLE_FIRST_LINE_ANIMATION_DURATION else 0,
     )
   }
   // Second line text "Edge Gallery" and its animation.
@@ -644,24 +669,26 @@ private fun AppTitle() {
   // text with a gradient is revealed.
   Box(modifier = Modifier.clearAndSetSemantics {}) {
     var delay = TITLE_SECOND_LINE_ANIMATION_START
-    SwipingText(
-      text = secondLineText,
-      style = titleStyle,
-      color = titleColor,
-      modifier = Modifier.offset(y = (-16).dp),
-      animationDelay = delay,
-      animationDurationMs = TITLE_SECOND_LINE_ANIMATION_DURATION,
-    )
-    delay += (TITLE_SECOND_LINE_ANIMATION_DURATION * 0.3).toInt()
-    SwipingText(
-      text = secondLineText,
-      style = titleStyle,
-      color = MaterialTheme.colorScheme.onSurface,
-      modifier = Modifier.offset(y = (-16).dp),
-      animationDelay = delay,
-      animationDurationMs = TITLE_SECOND_LINE_ANIMATION_DURATION,
-    )
-    delay += (TITLE_SECOND_LINE_ANIMATION_DURATION * 0.6).toInt()
+    if (enableAnimation) {
+      SwipingText(
+        text = secondLineText,
+        style = titleStyle,
+        color = titleColor,
+        modifier = Modifier.offset(y = (-16).dp),
+        animationDelay = delay,
+        animationDurationMs = TITLE_SECOND_LINE_ANIMATION_DURATION,
+      )
+      delay += (TITLE_SECOND_LINE_ANIMATION_DURATION * 0.3).toInt()
+      SwipingText(
+        text = secondLineText,
+        style = titleStyle,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.offset(y = (-16).dp),
+        animationDelay = delay,
+        animationDurationMs = TITLE_SECOND_LINE_ANIMATION_DURATION,
+      )
+      delay += (TITLE_SECOND_LINE_ANIMATION_DURATION * 0.6).toInt()
+    }
     RevealingText(
       text = secondLineText,
       style =
@@ -669,14 +696,14 @@ private fun AppTitle() {
           brush = linearGradient(colors = MaterialTheme.customColors.appTitleGradientColors)
         ),
       modifier = Modifier.offset(x = (-16).dp, y = (-16).dp),
-      animationDelay = delay,
-      animationDurationMs = TITLE_SECOND_LINE_ANIMATION_DURATION2,
+      animationDelay = if (enableAnimation) delay else 0,
+      animationDurationMs = if (enableAnimation) TITLE_SECOND_LINE_ANIMATION_DURATION2 else 0,
     )
   }
 }
 
 @Composable
-private fun IntroText() {
+private fun IntroText(enableAnimation: Boolean) {
   val url = "https://huggingface.co/litert-community"
   val linkColor = MaterialTheme.customColors.linkColor
   val uriHandler = LocalUriHandler.current
@@ -685,11 +712,13 @@ private fun IntroText() {
   //
   // fade in + slide up.
   val progress =
-    rememberDelayedAnimationProgress(
-      initialDelay = TITLE_SECOND_LINE_ANIMATION_START,
-      animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
-      animationLabel = "intro text animation",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = TITLE_SECOND_LINE_ANIMATION_START,
+        animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
+        animationLabel = "intro text animation",
+      )
 
   val introText = buildAnnotatedString {
     append("${stringResource(R.string.app_intro)} ")
@@ -726,6 +755,7 @@ private fun IntroText() {
 private fun CategoryTabHeader(
   sortedCategories: List<CategoryInfo>,
   selectedIndex: Int,
+  enableAnimation: Boolean,
   onCategorySelected: (Int) -> Unit,
 ) {
   val context = LocalContext.current
@@ -733,11 +763,13 @@ private fun CategoryTabHeader(
   val listState = rememberLazyListState()
 
   val progress =
-    rememberDelayedAnimationProgress(
-      initialDelay = TASK_LIST_ANIMATION_START,
-      animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
-      animationLabel = "task card animation",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = TASK_LIST_ANIMATION_START,
+        animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
+        animationLabel = "task card animation",
+      )
 
   LazyRow(
     state = listState,
@@ -800,6 +832,7 @@ private fun TaskList(
   pagerState: PagerState,
   sortedCategories: List<CategoryInfo>,
   tasksByCategories: Map<String, List<Task>>,
+  enableAnimation: Boolean,
   navigateToTaskScreen: (Task) -> Unit,
 ) {
   // Model list animation:
@@ -807,11 +840,13 @@ private fun TaskList(
   // 1.  Slide Up: The entire column of task cards translates upwards,
   // 2.  Fade in one by one: The task card fade in one by one. See TaskCard for details.
   val progress =
-    rememberDelayedAnimationProgress(
-      initialDelay = TASK_LIST_ANIMATION_START,
-      animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
-      animationLabel = "task card animation",
-    )
+    if (!enableAnimation) 1f
+    else
+      rememberDelayedAnimationProgress(
+        initialDelay = TASK_LIST_ANIMATION_START,
+        animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
+        animationLabel = "task card animation",
+      )
 
   // Tracks when the initial animation is done.
   //
@@ -840,7 +875,7 @@ private fun TaskList(
         TaskCard(
           task = task,
           index = index,
-          animate = (pageIndex == 0 || pageIndex == 1) && !initialAnimationDone,
+          animate = (pageIndex == 0 || pageIndex == 1) && !initialAnimationDone && enableAnimation,
           onClick = { navigateToTaskScreen(task) },
           modifier = Modifier.fillMaxWidth(),
         )
@@ -923,11 +958,21 @@ private fun TaskCard(
     ) {
       // Title and model count
       Column {
-        Text(
-          task.label,
-          color = MaterialTheme.colorScheme.onSurface,
-          style = MaterialTheme.typography.titleMedium,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text(
+            task.label,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+          )
+          if (task.experimental) {
+            Icon(
+              painter = painterResource(R.drawable.ic_experiment),
+              contentDescription = "Experimental",
+              modifier = Modifier.size(20.dp).padding(start = 4.dp),
+              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        }
         Text(
           curModelCountLabel,
           color = MaterialTheme.colorScheme.onSurfaceVariant,

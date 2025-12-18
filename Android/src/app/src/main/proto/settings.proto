@@ -56,6 +56,8 @@ message LlmConfig {
   float default_temperature = 5;
   bool support_image = 6;
   bool support_audio = 7;
+  bool support_tiny_garden = 8;
+  bool support_mobile_actions = 9;
 }
 
 message Settings {
@@ -64,7 +66,7 @@ message Settings {
   repeated string text_input_history = 3;
   repeated ImportedModel imported_model = 4;
   bool is_tos_accepted = 5;
-  bool has_run_gemmas_garden = 6;
+  bool has_run_tiny_garden = 6;
 }
 
 message UserData {

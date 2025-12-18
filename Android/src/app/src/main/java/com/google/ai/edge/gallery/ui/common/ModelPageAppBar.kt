@@ -72,6 +72,7 @@ fun ModelPageAppBar(
   isResettingSession: Boolean = false,
   onResetSessionClicked: (Model) -> Unit = {},
   canShowResetSessionButton: Boolean = false,
+  hideModelSelector: Boolean = false,
   onConfigChanged: (oldConfigValues: Map<String, Any>, newConfigValues: Map<String, Any>) -> Unit =
     { _, _ ->
     },
@@ -111,14 +112,16 @@ fun ModelPageAppBar(
         }
 
         // Model chips pager.
-        val enableModelPickerChip = !isModelInitializing && !inProgress
-        ModelPickerChip(
-          enabled = enableModelPickerChip,
-          task = task,
-          initialModel = model,
-          modelManagerViewModel = modelManagerViewModel,
-          onModelSelected = onModelSelected,
-        )
+        if (!hideModelSelector) {
+          val enableModelPickerChip = !isModelInitializing && !inProgress
+          ModelPickerChip(
+            enabled = enableModelPickerChip,
+            task = task,
+            initialModel = model,
+            modelManagerViewModel = modelManagerViewModel,
+            onModelSelected = onModelSelected,
+          )
+        }
       }
     },
     modifier = modifier,
@@ -166,7 +169,8 @@ fun ModelPageAppBar(
               modifier = Modifier.size(16.dp),
             )
           } else {
-            val enableResetButton = !isModelInitializing && !modelPreparing && isModelInitialized
+            val enableResetButton =
+              !isModelInitializing && !modelPreparing && !inProgress && isModelInitialized
             IconButton(
               onClick = { onResetSessionClicked(model) },
               enabled = enableResetButton,
@@ -234,21 +238,24 @@ fun ModelPageAppBar(
 
         // Save the config values to Model.
         val oldConfigValues = model.configValues
+        model.prevConfigValues = oldConfigValues
         model.configValues = curConfigValues
         modelManagerViewModel.updateConfigValuesUpdateTrigger()
 
-        // Force to re-initialize the model with the new configs.
-        if (needReinitialization) {
-          modelManagerViewModel.initializeModel(
-            context = context,
-            task = task,
-            model = model,
-            force = true,
-          )
-        }
+        if (!task.handleModelConfigChangesInTask) {
+          // Force to re-initialize the model with the new configs.
+          if (needReinitialization) {
+            modelManagerViewModel.initializeModel(
+              context = context,
+              task = task,
+              model = model,
+              force = true,
+            )
+          }
 
-        // Notify.
-        onConfigChanged(oldConfigValues, model.configValues)
+          // Notify.
+          onConfigChanged(oldConfigValues, model.configValues)
+        }
       },
     )
   }
